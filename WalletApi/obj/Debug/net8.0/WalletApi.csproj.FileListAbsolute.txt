@@ -31,3 +31,4 @@ C:\Users\Ju-st\Projetos Programação GitHub\WalletAPI\WalletApi\obj\Debug\net8.
 C:\Users\Ju-st\Projetos Programação GitHub\WalletAPI\WalletApi\obj\Debug\net8.0\WalletApi.pdb
 C:\Users\Ju-st\Projetos Programação GitHub\WalletAPI\WalletApi\obj\Debug\net8.0\WalletApi.genruntimeconfig.cache
 C:\Users\Ju-st\Projetos Programação GitHub\WalletAPI\WalletApi\obj\Debug\net8.0\ref\WalletApi.dll
+C:\Users\Ju-st\Projetos Programação GitHub\WalletAPI\WalletApi\obj\Debug\net8.0\WalletApi.sourcelink.json
