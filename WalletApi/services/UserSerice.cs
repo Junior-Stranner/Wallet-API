@@ -1,57 +1,98 @@
-using System.Security.Cryptography;
-using System.Text;
-
-
 public class UserService
 {
-    private readonly ApplicationDbContext _context;
-    private readonly IConfiguration _configuration;
+    private readonly UserRepository _userRepository;
+    private readonly WalletRepository _walletRepository; // Adicionado WalletRepository
+    private readonly AppDbContext _context;
 
-    public UserService(ApplicationDbContext context, IConfiguration configuration)
+    public UserService(UserRepository userRepository, WalletRepository walletRepository, AppDbContext context) // Adicionado WalletRepository
     {
+        _userRepository = userRepository;
+        _walletRepository = walletRepository; // Injetado
         _context = context;
-        _configuration = configuration;
     }
 
-    public User Register(string email, string password)
+    public async Task<UserDto?> GetUserByIdAsync(int id)
     {
-        if (_context.Users.Any(u => u.Email == email))
-            throw new Exception("Usuário já existe.");
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+            return null;
 
-        var passwordHash = HashPassword(password);
-        var user = new User { Email = email, PasswordHash = passwordHash };
-
-        _context.Users.Add(user);
-        _context.SaveChanges();
-
-        // Cria carteira vazia
-        var wallet = new Wallet { Balance = 0, UserId = user.Id };
-        _context.Wallets.Add(wallet);
-        _context.SaveChanges();
-
-        return user;
+        return new UserDto
+        {
+            Id = user.Id,
+            Email = user.Email
+        };
     }
 
-    public string Login(string email, string password)
+    public async Task<UserDto?> GetUserByEmailAsync(string email)
     {
-        var user = _context.Users.FirstOrDefault(u => u.Email == email);
-        if (user == null || !VerifyPassword(password, user.PasswordHash))
-            throw new Exception("Credenciais inválidas");
-
-        return GenerateJwtToken(user);
+        var user = await _userRepository.GetByEmailAsync(email);
+         if (user == null)
+            return null;
+        return new UserDto
+        {
+            Id = user.Id,
+            Email = user.Email
+        };
     }
 
-    private string HashPassword(string password)
+    public async Task AddUserAsync(UserCreateDto userDto)
     {
-        using var sha256 = SHA256.Create();
-        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(bytes);
+        // Validação de e-mail único pode ser feita aqui também, se necessário.
+
+        var user = new User
+        {
+            Email = userDto.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(userDto.Password),
+        };
+
+        // Inicia uma transação para garantir a atomicidade da operação
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            await _userRepository.AddAsync(user); // Adiciona o usuário
+
+            var wallet = new Wallet { Balance = 0, UserId = user.Id }; //cria a carteira
+            await _walletRepository.AddAsync(wallet); //adiciona a carteira
+
+            await transaction.CommitAsync(); //commit
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(); //rollback em caso de erro
+            throw; // Relança a exceção para ser tratada na camada superior
+        }
     }
 
-    private bool VerifyPassword(string password, string hash)
+    public async Task UpdateUserAsync(int id, UserDto userDto)
     {
-        return HashPassword(password) == hash;
+        var existingUser = await _userRepository.GetByIdAsync(id);
+        if (existingUser == null)
+        {
+            throw new KeyNotFoundException($"User with id {id} not found");
+        }
+
+        existingUser.Email = userDto.Email; // Atualiza outros campos se necessário
+        await _userRepository.UpdateAsync(existingUser);
     }
 
+    public async Task DeleteUserAsync(int id)
+    {
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+        {
+            throw new KeyNotFoundException($"User with id {id} not found");
+        }
+        await _userRepository.DeleteAsync(user);
+    }
 
+     public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+    {
+        var users = await _userRepository.GetAllAsync();
+        return users.Select(user => new UserDto
+        {
+            Id = user.Id,
+            Email = user.Email
+        }).ToList();
+    }
 }

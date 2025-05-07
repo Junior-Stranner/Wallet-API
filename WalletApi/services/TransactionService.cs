@@ -1,3 +1,7 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+
 public class TransactionService
 {
     private readonly ApplicationDbContext _context;
@@ -9,14 +13,14 @@ public class TransactionService
         _httpContextAccessor = accessor;
     }
 
-    public void Transfer(int toUserId, decimal amount)
+    public async Task TransferAsync(int toUserId, decimal amount)
     {
         var fromUserId = GetUserId();
         if (fromUserId == toUserId)
             throw new Exception("Você não pode transferir para si mesmo.");
 
-        var fromWallet = _context.Wallets.FirstOrDefault(w => w.UserId == fromUserId);
-        var toWallet = _context.Wallets.FirstOrDefault(w => w.UserId == toUserId);
+        var fromWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == fromUserId);
+        var toWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == toUserId);
 
         if (fromWallet == null || toWallet == null)
             throw new Exception("Carteira(s) não encontrada(s)");
@@ -24,7 +28,6 @@ public class TransactionService
         if (fromWallet.Balance < amount)
             throw new Exception("Saldo insuficiente");
 
-        // Efetua a transferência
         fromWallet.Balance -= amount;
         toWallet.Balance += amount;
 
@@ -37,10 +40,10 @@ public class TransactionService
         };
 
         _context.Transactions.Add(transaction);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public List<Transaction> GetTransactions(DateTime? start, DateTime? end)
+    public async Task<List<Transaction>> GetTransactionsAsync(DateTime? start, DateTime? end)
     {
         var userId = GetUserId();
 
@@ -53,9 +56,9 @@ public class TransactionService
         if (end.HasValue)
             query = query.Where(t => t.Date <= end.Value);
 
-        return query
+        return await query
             .OrderByDescending(t => t.Date)
-            .ToList();
+            .ToListAsync();
     }
 
     private int GetUserId()

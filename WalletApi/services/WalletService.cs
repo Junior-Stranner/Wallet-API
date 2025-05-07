@@ -1,9 +1,11 @@
+using System.Security.Claims;
+
 public class WalletService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly AppDbContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public WalletService(ApplicationDbContext context, IHttpContextAccessor accessor)
+    public WalletService(AppDbContext context, IHttpContextAccessor accessor)
     {
         _context = context;
         _httpContextAccessor = accessor;

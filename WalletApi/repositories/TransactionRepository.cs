@@ -1,37 +1,34 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
-
-public class TransactionRepository : ITransactionRepository
+public class TransactionRepository
 {
-    private readonly ApplicationDbContext _context;
+    private readonly AppDbContext _context;
 
-    public TransactionRepository(ApplicationDbContext context)
+    public TransactionRepository(AppDbContext context)
     {
         _context = context;
     }
 
     public async Task AddAsync(Transaction transaction)
     {
-        await _context.Transactions.AddAsync(transaction);
+        _context.Transactions.Add(transaction);
         await _context.SaveChangesAsync();
     }
 
     public async Task<IEnumerable<Transaction>> GetByUserIdAsync(int userId, DateTime? startDate = null, DateTime? endDate = null)
     {
-        var query = _context.Transactions
-            .Include(t => t.SenderWallet)
-            .Include(t => t.ReceiverWallet)
-            .Where(t => t.SenderWallet.UserId == userId || t.ReceiverWallet.UserId == userId)
-            .AsQueryable();
+        var query = _context.Transactions.Where(t => t.SenderWallet.UserId == userId || t.ReceiverWallet.UserId == userId);
 
         if (startDate.HasValue)
-            query = query.Where(t => t.Timestamp >= startDate.Value);
-        if (endDate.HasValue)
-            query = query.Where(t => t.Timestamp <= endDate.Value);
+        {
+            query = query.Where(t => t.TransactionDate >= startDate.Value.ToUniversalTime());
+        }
 
-        return await query.ToListAsync();
+        if (endDate.HasValue)
+        {
+            query = query.Where(t => t.TransactionDate <= endDate.Value.ToUniversalTime());
+        }
+
+        return await query.OrderByDescending(t => t.TransactionDate).ToListAsync();
     }
 }

@@ -1,37 +1,33 @@
 using Microsoft.EntityFrameworkCore;
-using YourNamespace.Models; // ajuste o namespace conforme sua estrutura
 
-public class ApplicationDbContext : DbContext
+public class AppDbContext : DbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options)
-    {
-    }
-
     public DbSet<User> Users { get; set; }
     public DbSet<Wallet> Wallets { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        base.OnModelCreating(modelBuilder);
-
-        // Configurações adicionais de relacionamento (opcional)
+    }
+     protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
         modelBuilder.Entity<User>()
-            .HasOne<Wallet>()
+            .HasOne(u => u.Wallet)
             .WithOne(w => w.User)
             .HasForeignKey<Wallet>(w => w.UserId);
 
         modelBuilder.Entity<Transaction>()
             .HasOne(t => t.SenderWallet)
-            .WithMany()
+            .WithMany(w => w.SentTransactions)
             .HasForeignKey(t => t.SenderWalletId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete
 
         modelBuilder.Entity<Transaction>()
             .HasOne(t => t.ReceiverWallet)
-            .WithMany()
+            .WithMany(w => w.ReceivedTransactions)
             .HasForeignKey(t => t.ReceiverWalletId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete
+
+        base.OnModelCreating(modelBuilder);
     }
 }
