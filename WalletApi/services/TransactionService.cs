@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 public class TransactionService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly AppDbContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public TransactionService(ApplicationDbContext context, IHttpContextAccessor accessor)
+    public TransactionService(AppDbContext context, IHttpContextAccessor accessor)
     {
         _context = context;
         _httpContextAccessor = accessor;
